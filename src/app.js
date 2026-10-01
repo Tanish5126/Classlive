@@ -2,6 +2,9 @@
 const express = require('express');
 const cors = require('cors');
 
+const authRoutes = require('./routes/auth.routes');
+const errorHandler = require('./middleware/error.middleware');
+
 const app = express();
 
 // Enable Cross-Origin Resource Sharing
@@ -20,5 +23,19 @@ app.get('/api/health', (req, res) => {
     message: 'ClassLive API running'
   });
 });
+
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
+// 404 handler for unknown routes
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`
+  });
+});
+
+// Global error handler middleware (must be last)
+app.use(errorHandler);
 
 module.exports = app;
