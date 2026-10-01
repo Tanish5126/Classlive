@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "start": "node src/server.js",
-  "dev": "nodemon src/server.js"
-},
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node scripts/seed.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Tanish5126/Classlive.git"

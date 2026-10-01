@@ -3,6 +3,11 @@ const express = require('express');
 const cors = require('cors');
 
 const authRoutes = require('./routes/auth.routes');
+const classRoutes = require('./routes/class.routes');
+const sessionRoutes = require('./routes/session.routes');
+const quizRoutes = require('./routes/quiz.routes');
+const submissionRoutes = require('./routes/submission.routes');
+const attendanceRoutes = require('./routes/attendance.routes');
 const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
@@ -24,8 +29,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Authentication routes
+// Resource routes
 app.use('/api/auth', authRoutes);
+app.use('/api/classes', classRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/submissions', submissionRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {
