@@ -1,0 +1,36 @@
+{
+  "name": "classlive-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  "start": "node src/server.js",
+  "dev": "nodemon src/server.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tanish5126/Classlive.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Tanish5126/Classlive/issues"
+  },
+  "homepage": "https://github.com/Tanish5126/Classlive#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "firebase-admin": "^14.5.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.3",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
