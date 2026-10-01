@@ -1,11 +1,230 @@
-<!-- Socket.io and real-time test client placeholder for Phase 3 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ClassLive Test Client</title>
+  <title>ClassLive Socket.io Test Client</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 800px;
+    }
+    .field {
+      margin-bottom: 12px;
+    }
+    label {
+      display: inline-block;
+      width: 110px;
+      font-weight: bold;
+    }
+    input {
+      width: 480px;
+      padding: 6px;
+    }
+    .buttons {
+      margin: 15px 0;
+    }
+    button {
+      padding: 8px 14px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+    #status {
+      font-weight: bold;
+      color: #888;
+    }
+    #logBox {
+      border: 1px solid #ccc;
+      background: #f8f9fa;
+      height: 350px;
+      overflow-y: scroll;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .log-entry {
+      margin-bottom: 8px;
+      border-bottom: 1px dashed #e0e0e0;
+      padding-bottom: 4px;
+    }
+    .event-name {
+      font-weight: bold;
+      color: #0066cc;
+    }
+    .event-error {
+      color: #cc0000;
+    }
+  </style>
 </head>
 <body>
-  <h1>ClassLive Test Client</h1>
+  <h2>ClassLive Real-Time Classroom Test Client</h2>
+
+  <div class="field">
+    <label for="token">JWT Token:</label>
+    <input type="text" id="token" placeholder="Paste Teacher or Student JWT here">
+  </div>
+
+  <div class="field">
+    <label for="sessionId">Session ID:</label>
+    <input type="text" id="sessionId" placeholder="Paste MongoDB Session ID here">
+  </div>
+
+  <div class="field">
+    <label for="quizId">Quiz ID:</label>
+    <input type="text" id="quizId" placeholder="Optional: Quiz ID for 'Start Quiz'">
+  </div>
+
+  <div class="field">
+    <span>Connection Status: </span>
+    <span id="status">Disconnected</span>
+  </div>
+
+  <div class="buttons">
+    <button id="connectBtn" onclick="connectSocket()">1. Connect</button>
+    <button id="joinBtn" onclick="joinSession()">2. Join Session</button>
+    <button id="leaveBtn" onclick="leaveSession()">3. Leave Session</button>
+    <button id="startQuizBtn" onclick="startQuiz()">Start Quiz (Teacher)</button>
+    <button id="startScreenBtn" onclick="startScreenShare()">Start Screen Share (Teacher)</button>
+    <button id="stopScreenBtn" onclick="stopScreenShare()">Stop Screen Share (Teacher)</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+  </div>
+
+  <h3>Real-Time Event Logs:</h3>
+  <div id="logBox"></div>
+
+  <!-- Socket.io client script served automatically by the server -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = null;
+
+    // Helper to log received events in scrolling box
+    function logEvent(name, data, isError = false) {
+      const logBox = document.getElementById('logBox');
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+
+      const title = document.createElement('span');
+      title.className = isError ? 'event-name event-error' : 'event-name';
+      title.innerText = `[${time}] ${name}: `;
+      entry.appendChild(title);
+
+      const content = document.createElement('span');
+      content.innerText = data ? JSON.stringify(data, null, 2) : '(no payload)';
+      entry.appendChild(content);
+
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('logBox').innerHTML = '';
+    }
+
+    // Connect to Socket.io server with JWT authentication
+    function connectSocket() {
+      const token = document.getElementById('token').value.trim();
+      const statusEl = document.getElementById('status');
+
+      if (!token) {
+        alert('Please enter a JWT token first.');
+        return;
+      }
+
+      if (socket) {
+        socket.disconnect();
+      }
+
+      logEvent('SYSTEM', { message: 'Connecting to Socket.io server with token...' });
+
+      // Pass token in auth object
+      socket = io({
+        auth: { token }
+      });
+
+      socket.on('connect', () => {
+        statusEl.innerText = 'Connected (Socket ID: ' + socket.id + ')';
+        statusEl.style.color = 'green';
+        logEvent('connect', { socketId: socket.id });
+      });
+
+      socket.on('connect_error', (err) => {
+        statusEl.innerText = 'Connection Failed';
+        statusEl.style.color = 'red';
+        logEvent('connect_error', { error: err.message }, true);
+      });
+
+      socket.on('disconnect', (reason) => {
+        statusEl.innerText = 'Disconnected (' + reason + ')';
+        statusEl.style.color = '#888';
+        logEvent('disconnect', { reason });
+      });
+
+      // Listen for classroom room events
+      socket.on('joined-ok', (data) => logEvent('joined-ok', data));
+      socket.on('user-joined', (data) => logEvent('user-joined', data));
+      socket.on('user-left', (data) => logEvent('user-left', data));
+      socket.on('participants', (data) => logEvent('participants', data));
+      socket.on('quiz-started', (data) => logEvent('quiz-started', data));
+      socket.on('screen-share-started', (data) => logEvent('screen-share-started', data));
+      socket.on('screen-share-stopped', (data) => logEvent('screen-share-stopped', data));
+      socket.on('error-message', (data) => logEvent('error-message', data, true));
+    }
+
+    function joinSession() {
+      if (!socket || !socket.connected) {
+        alert('Connect to socket first.');
+        return;
+      }
+      const sessionId = document.getElementById('sessionId').value.trim();
+      if (!sessionId) {
+        alert('Please enter a Session ID.');
+        return;
+      }
+      socket.emit('join-session', { sessionId });
+    }
+
+    function leaveSession() {
+      if (!socket || !socket.connected) return;
+      const sessionId = document.getElementById('sessionId').value.trim();
+      socket.emit('leave-session', { sessionId });
+    }
+
+    function startQuiz() {
+      if (!socket || !socket.connected) return;
+      const sessionId = document.getElementById('sessionId').value.trim();
+      let quizId = document.getElementById('quizId').value.trim();
+      if (!quizId) {
+        quizId = prompt('Enter Quiz ID:');
+      }
+      if (!sessionId || !quizId) {
+        alert('Session ID and Quiz ID are required.');
+        return;
+      }
+      socket.emit('start-quiz', { sessionId, quizId });
+    }
+
+    function startScreenShare() {
+      if (!socket || !socket.connected) return;
+      const sessionId = document.getElementById('sessionId').value.trim();
+      if (!sessionId) {
+        alert('Please enter a Session ID.');
+        return;
+      }
+      socket.emit('start-screen-share', { sessionId });
+    }
+
+    function stopScreenShare() {
+      if (!socket || !socket.connected) return;
+      const sessionId = document.getElementById('sessionId').value.trim();
+      if (!sessionId) {
+        alert('Please enter a Session ID.');
+        return;
+      }
+      socket.emit('stop-screen-share', { sessionId });
+    }
+  </script>
 </body>
 </html>

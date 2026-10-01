@@ -1,6 +1,7 @@
 // Express application configuration and middleware setup
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const authRoutes = require('./routes/auth.routes');
 const classRoutes = require('./routes/class.routes');
@@ -20,6 +21,9 @@ app.use(express.json());
 
 // Parse incoming URL-encoded request bodies
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static frontend files from public directory
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
