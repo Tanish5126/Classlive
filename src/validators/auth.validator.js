@@ -33,7 +33,25 @@ const loginValidator = [
     .withMessage('Password is required')
 ];
 
+// Validation rules for Firebase ID token login
+const firebaseLoginValidator = [
+  body('idToken')
+    .trim()
+    .notEmpty()
+    .withMessage('Firebase idToken is required')
+];
+
+// Validation rules for updating FCM push notification token
+const fcmTokenValidator = [
+  body('fcmToken')
+    .trim()
+    .notEmpty()
+    .withMessage('fcmToken is required')
+];
+
 module.exports = {
   registerValidator,
-  loginValidator
+  loginValidator,
+  firebaseLoginValidator,
+  fcmTokenValidator
 };

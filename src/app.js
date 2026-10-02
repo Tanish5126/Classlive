@@ -9,6 +9,7 @@ const sessionRoutes = require('./routes/session.routes');
 const quizRoutes = require('./routes/quiz.routes');
 const submissionRoutes = require('./routes/submission.routes');
 const attendanceRoutes = require('./routes/attendance.routes');
+const notificationRoutes = require('./routes/notification.routes');
 const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {

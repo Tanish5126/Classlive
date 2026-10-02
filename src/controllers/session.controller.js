@@ -1,7 +1,7 @@
-// Session controller handling CRUD operations for live class meetings
 const Session = require('../models/Session');
 const Class = require('../models/Class');
 const ApiError = require('../utils/ApiError');
+const { sendClassNotification } = require('../services/notification.service');
 
 // @desc    Get all sessions (with optional ?classId= query filter)
 // @route   GET /api/sessions
@@ -79,6 +79,18 @@ const createSession = async (req, res, next) => {
       scheduledAt,
       status: status || 'scheduled',
       createdBy: req.user._id
+    });
+
+    // Notify students subscribed to the class topic (failures must never break session creation)
+    sendClassNotification({
+      classId,
+      title: 'New Class Session',
+      body: `New session scheduled: ${title}`,
+      data: {
+        sessionId: String(newSession._id)
+      }
+    }).catch((err) => {
+      console.error('Failed to dispatch session notification:', err.message);
     });
 
     res.status(201).json({
