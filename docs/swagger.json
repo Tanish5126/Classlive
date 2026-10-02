@@ -3,7 +3,698 @@
   "info": {
     "title": "ClassLive API",
     "version": "1.0.0",
-    "description": "API documentation for ClassLive backend"
+    "description": "Comprehensive REST API documentation for the ClassLive Virtual Classroom backend."
   },
-  "paths": {}
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token: Bearer <token>"
+      }
+    },
+    "schemas": {
+      "StandardResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "object", "nullable": true }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health Check",
+        "description": "Returns API server health status.",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "ClassLive API running" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "description": "Creates a new student or teacher account and returns a 7-day JWT token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string", "example": "Jane Doe" },
+                  "email": { "type": "string", "format": "email", "example": "jane@example.com" },
+                  "password": { "type": "string", "minLength": 6, "example": "password123" },
+                  "role": { "type": "string", "enum": ["student", "teacher"], "default": "student" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User registered successfully" },
+          "400": { "description": "Validation error or email already exists" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login with email and password",
+        "description": "Authenticates user credentials and returns a JWT token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "jane@example.com" },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Invalid email or password" }
+        }
+      }
+    },
+    "/api/auth/firebase-login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login / Register with Firebase ID Token",
+        "description": "Verifies Firebase ID token, creates student user if not found, and returns ClassLive JWT token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["idToken"],
+                "properties": {
+                  "idToken": { "type": "string", "example": "eyJhbGciOiJSUzI1Ni..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Firebase login successful" },
+          "400": { "description": "Missing ID token or invalid payload" },
+          "401": { "description": "Firebase ID token verification failed" },
+          "500": { "description": "Firebase not configured on server" }
+        }
+      }
+    },
+    "/api/auth/fcm-token": {
+      "put": {
+        "tags": ["Auth"],
+        "summary": "Update FCM Device Token",
+        "description": "Saves device registration token for receiving push notifications.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fcmToken"],
+                "properties": {
+                  "fcmToken": { "type": "string", "example": "fcm_token_sample_12345" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "FCM token updated successfully" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get Current Authenticated User",
+        "description": "Returns profile information of the user encoded in the JWT.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Profile fetched successfully" },
+          "401": { "description": "Not authorized / Invalid token" }
+        }
+      }
+    },
+    "/api/classes": {
+      "get": {
+        "tags": ["Classes"],
+        "summary": "Get All Classes",
+        "description": "Returns all registered classes with teacher and student details.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Classes fetched successfully" },
+          "401": { "description": "Not authorized" }
+        }
+      },
+      "post": {
+        "tags": ["Classes"],
+        "summary": "Create a New Class",
+        "description": "Teacher only. Teacher ID is extracted from JWT.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "subject"],
+                "properties": {
+                  "title": { "type": "string", "example": "Physics 101" },
+                  "subject": { "type": "string", "example": "Physics" },
+                  "description": { "type": "string", "example": "Classical Mechanics and Kinematics" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Class created successfully" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Teacher role required" }
+        }
+      }
+    },
+    "/api/classes/{id}": {
+      "get": {
+        "tags": ["Classes"],
+        "summary": "Get Single Class Details",
+        "description": "Returns class details by MongoDB ID.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Class MongoDB ID" }
+        ],
+        "responses": {
+          "200": { "description": "Class fetched successfully" },
+          "400": { "description": "Invalid class ID format" },
+          "401": { "description": "Not authorized" },
+          "404": { "description": "Class not found" }
+        }
+      },
+      "put": {
+        "tags": ["Classes"],
+        "summary": "Update Class Details",
+        "description": "Teacher only. Only the teacher who created the class can update it.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Class MongoDB ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "example": "Advanced Physics 101" },
+                  "subject": { "type": "string", "example": "Physics" },
+                  "description": { "type": "string", "example": "Updated syllabus" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Class updated successfully" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to update this class" },
+          "404": { "description": "Class not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Classes"],
+        "summary": "Delete a Class",
+        "description": "Teacher only. Only the teacher who created the class can delete it.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Class MongoDB ID" }
+        ],
+        "responses": {
+          "200": { "description": "Class deleted successfully" },
+          "400": { "description": "Invalid class ID format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to delete this class" },
+          "404": { "description": "Class not found" }
+        }
+      }
+    },
+    "/api/classes/{id}/join": {
+      "post": {
+        "tags": ["Classes"],
+        "summary": "Student Enrolls in Class",
+        "description": "Student only. Adds student to the class roster without duplicates.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Class MongoDB ID" }
+        ],
+        "responses": {
+          "200": { "description": "Joined class successfully or already enrolled" },
+          "400": { "description": "Invalid class ID format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Student role required" },
+          "404": { "description": "Class not found" }
+        }
+      }
+    },
+    "/api/sessions": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Get All Sessions",
+        "description": "Returns sessions, optionally filtered by ?classId=.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "classId", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Filter by class ID" }
+        ],
+        "responses": {
+          "200": { "description": "Sessions fetched successfully" },
+          "400": { "description": "Invalid query format" },
+          "401": { "description": "Not authorized" }
+        }
+      },
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Schedule a Live Class Session",
+        "description": "Teacher only. Teacher must own the referenced class.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["class", "title", "scheduledAt"],
+                "properties": {
+                  "class": { "type": "string", "example": "651f1...mongodb_id" },
+                  "title": { "type": "string", "example": "Kinematics Lecture" },
+                  "scheduledAt": { "type": "string", "format": "date-time", "example": "2026-10-10T10:00:00.000Z" },
+                  "status": { "type": "string", "enum": ["scheduled", "live", "ended"], "default": "scheduled" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Session created successfully" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to create sessions for this class" },
+          "404": { "description": "Class not found" }
+        }
+      }
+    },
+    "/api/sessions/{id}": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Get Single Session Details",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Session MongoDB ID" }
+        ],
+        "responses": {
+          "200": { "description": "Session fetched successfully" },
+          "400": { "description": "Invalid session ID format" },
+          "401": { "description": "Not authorized" },
+          "404": { "description": "Session not found" }
+        }
+      },
+      "put": {
+        "tags": ["Sessions"],
+        "summary": "Update Session",
+        "description": "Teacher only. Only the creator teacher can update the session.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Session MongoDB ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "example": "Updated Kinematics Lecture" },
+                  "scheduledAt": { "type": "string", "format": "date-time" },
+                  "status": { "type": "string", "enum": ["scheduled", "live", "ended"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Session updated successfully" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to update this session" },
+          "404": { "description": "Session not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Sessions"],
+        "summary": "Delete Session",
+        "description": "Teacher only. Only the creator teacher can delete the session.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Session MongoDB ID" }
+        ],
+        "responses": {
+          "200": { "description": "Session deleted successfully" },
+          "400": { "description": "Invalid session ID format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to delete this session" },
+          "404": { "description": "Session not found" }
+        }
+      }
+    },
+    "/api/quizzes": {
+      "get": {
+        "tags": ["Quizzes"],
+        "summary": "Get Quizzes",
+        "description": "Returns quizzes (optional ?classId= filter). Note: Students never see correctAnswer; teachers see full answer keys.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "classId", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Filter by class ID" }
+        ],
+        "responses": {
+          "200": { "description": "Quizzes fetched successfully" },
+          "400": { "description": "Invalid query format" },
+          "401": { "description": "Not authorized" }
+        }
+      },
+      "post": {
+        "tags": ["Quizzes"],
+        "summary": "Create a New Quiz",
+        "description": "Teacher only. Teacher must own the referenced class.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "class", "questions"],
+                "properties": {
+                  "title": { "type": "string", "example": "Forces Quiz" },
+                  "class": { "type": "string", "example": "651f1...mongodb_id" },
+                  "questions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["questionText", "options", "correctAnswer"],
+                      "properties": {
+                        "questionText": { "type": "string", "example": "What is unit of force?" },
+                        "options": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "example": ["Joule", "Newton", "Watt", "Pascal"]
+                        },
+                        "correctAnswer": { "type": "integer", "example": 1 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Quiz created successfully" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to create quizzes for this class" },
+          "404": { "description": "Class not found" }
+        }
+      }
+    },
+    "/api/quizzes/{id}": {
+      "get": {
+        "tags": ["Quizzes"],
+        "summary": "Get Single Quiz Details",
+        "description": "Returns quiz details. Answer keys are automatically hidden from student accounts.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Quiz MongoDB ID" }
+        ],
+        "responses": {
+          "200": { "description": "Quiz fetched successfully" },
+          "400": { "description": "Invalid quiz ID format" },
+          "401": { "description": "Not authorized" },
+          "404": { "description": "Quiz not found" }
+        }
+      },
+      "put": {
+        "tags": ["Quizzes"],
+        "summary": "Update Quiz",
+        "description": "Teacher only. Only creator teacher can update.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Quiz MongoDB ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "example": "Updated Forces Quiz" },
+                  "questions": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Quiz updated successfully" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to update this quiz" },
+          "404": { "description": "Quiz not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Quizzes"],
+        "summary": "Delete Quiz",
+        "description": "Teacher only. Only creator teacher can delete.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Quiz MongoDB ID" }
+        ],
+        "responses": {
+          "200": { "description": "Quiz deleted successfully" },
+          "400": { "description": "Invalid quiz ID format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to delete this quiz" },
+          "404": { "description": "Quiz not found" }
+        }
+      }
+    },
+    "/api/submissions": {
+      "post": {
+        "tags": ["Submissions"],
+        "summary": "Submit Quiz Answers",
+        "description": "Student only. Automatically grades answers on the server and records score. Fails if student already submitted.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["quizId", "answers"],
+                "properties": {
+                  "quizId": { "type": "string", "example": "651f1...mongodb_id" },
+                  "answers": {
+                    "type": "array",
+                    "items": { "type": "integer" },
+                    "example": [1, 0, 2]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Quiz submitted and graded successfully" },
+          "400": { "description": "Already submitted or validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Student role required" },
+          "404": { "description": "Quiz not found" }
+        }
+      },
+      "get": {
+        "tags": ["Submissions"],
+        "summary": "Get All Submissions",
+        "description": "Teacher only. Optional ?quizId= filter.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "quizId", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Filter by quiz ID" }
+        ],
+        "responses": {
+          "200": { "description": "Submissions fetched successfully" },
+          "400": { "description": "Invalid query format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Teacher role required" }
+        }
+      }
+    },
+    "/api/submissions/student/{id}": {
+      "get": {
+        "tags": ["Submissions"],
+        "summary": "Get Submissions for a Student",
+        "description": "A student can only view their own submissions. Teachers can view any student's submissions.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Student MongoDB User ID" }
+        ],
+        "responses": {
+          "200": { "description": "Student submissions fetched successfully" },
+          "400": { "description": "Invalid student ID format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to view other students' submissions" }
+        }
+      }
+    },
+    "/api/attendance": {
+      "post": {
+        "tags": ["Attendance"],
+        "summary": "Mark Attendance",
+        "description": "Students mark their own attendance (only when session is 'live'). Teachers can pass studentId to mark for any student. Enforces one record per student per session.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sessionId"],
+                "properties": {
+                  "sessionId": { "type": "string", "example": "651f1...mongodb_id" },
+                  "studentId": { "type": "string", "example": "651f1...mongodb_id (Optional for Teacher only)" },
+                  "status": { "type": "string", "enum": ["present", "absent"], "default": "present" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Attendance marked successfully" },
+          "400": { "description": "Session not live, duplicate attendance, or missing studentId for teacher" },
+          "401": { "description": "Not authorized" },
+          "404": { "description": "Session not found" }
+        }
+      },
+      "get": {
+        "tags": ["Attendance"],
+        "summary": "Get All Attendance Records",
+        "description": "Teacher only. Optional ?sessionId= query filter.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "sessionId", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Filter by session ID" }
+        ],
+        "responses": {
+          "200": { "description": "Attendance records fetched successfully" },
+          "400": { "description": "Invalid query format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Teacher role required" }
+        }
+      }
+    },
+    "/api/attendance/student/{id}": {
+      "get": {
+        "tags": ["Attendance"],
+        "summary": "Get Attendance Records for a Student",
+        "description": "A student can only view their own attendance. Teachers can view any student's attendance records.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Student MongoDB User ID" }
+        ],
+        "responses": {
+          "200": { "description": "Student attendance fetched successfully" },
+          "400": { "description": "Invalid student ID format" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Not authorized to view other students' attendance" }
+        }
+      }
+    },
+    "/api/notifications/send": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Send Push Notification to Class Topic",
+        "description": "Teacher only. Teacher must own the referenced class. Dispatches push notification to topic 'class_<classId>' via FCM.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["classId", "title", "body"],
+                "properties": {
+                  "classId": { "type": "string", "example": "651f1...mongodb_id" },
+                  "title": { "type": "string", "example": "Class Announcement" },
+                  "body": { "type": "string", "example": "Quiz starts in 10 minutes" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Notification processed and dispatched" },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Not authorized" },
+          "403": { "description": "Teacher role required or not owner of class" },
+          "404": { "description": "Class not found" }
+        }
+      }
+    }
+  }
 }

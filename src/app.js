@@ -2,6 +2,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('../docs/swagger.json');
 
 const authRoutes = require('./routes/auth.routes');
 const classRoutes = require('./routes/class.routes');
@@ -25,6 +27,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static frontend files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Swagger API documentation endpoint
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
